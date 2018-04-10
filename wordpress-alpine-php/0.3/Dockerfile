@@ -1,7 +1,7 @@
 #
 # Dockerfile for WordPress
 #
-FROM appsvcorg/alpine-php-mysql:0.1 
+FROM appsvcorg/alpine-php-mysql:0.2 
 MAINTAINER Azure App Service Container Images <appsvc-images@microsoft.com>
 
 # ========
@@ -24,10 +24,14 @@ ENV DOCKER_BUILD_HOME "/dockerbuild"
 
 WORKDIR $DOCKER_BUILD_HOME
 RUN set -ex \
+    # --------
+	# ~. tools
+	# --------
+    && apk add --update git \
 	# --------
 	# 1. redis
 	# --------
-        && apk add --update redis \
+    && apk add --update redis \
 	# ------------	
 	# 2. wordpress
 	# ------------
@@ -53,7 +57,6 @@ RUN set -ex \
 # =====
 # final
 # =====
-COPY wp.tar.gz $WORDPRESS_SOURCE/
 COPY wp-config.php $WORDPRESS_SOURCE/
 
 COPY entrypoint.sh /usr/local/bin/

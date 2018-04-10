@@ -39,8 +39,12 @@ setup_phpmyadmin(){
     tar -xf phpmyadmin.tar.gz -C $PHPMYADMIN_HOME --strip-components=1
     cp -R phpmyadmin-config.inc.php $PHPMYADMIN_HOME/config.inc.php
     rm -rf $PHPMYADMIN_SOURCE
-    chown -R www-data:www-data $PHPMYADMIN_HOME
+    if [ ! $WEBSITES_ENABLE_APP_SERVICE_STORAGE ]; then
+        echo "INFO: NOT in Azure, chown for "$PHPMYADMIN_HOME  
+        chown -R www-data:www-data $PHPMYADMIN_HOME
+    fi 
 }
+    
 
 load_phpmyadmin(){
         if ! grep -q "^Include conf/httpd-phpmyadmin.conf" $HTTPD_CONF_FILE; then
@@ -50,12 +54,22 @@ load_phpmyadmin(){
 
 setup_wordpress(){
 	test ! -d "$WORDPRESS_HOME" && echo "INFO: $WORDPRESS_HOME not found. creating ..." && mkdir -p "$WORDPRESS_HOME"
-
-	cd $WORDPRESS_SOURCE
-	tar -xf wp.tar.gz -C $WORDPRESS_HOME/ --strip-components=1
-	
-	chown -R www-data:www-data $WORDPRESS_HOME
+	cd $WORDPRESS_HOME
+	GIT_REPO=${GIT_REPO:-https://github.com/azureappserviceoss/wordpress-azure}
+	GIT_BRANCH=${GIT_BRANCH:-linux_appservice}
+	echo "INFO: ++++++++++++++++++++++++++++++++++++++++++++++++++:"
+	echo "REPO: "$GIT_REPO
+	echo "BRANCH: "$GIT_BRANCH
+	echo "INFO: ++++++++++++++++++++++++++++++++++++++++++++++++++:"
     
+	echo "INFO: Clone from "$GIT_REPO		
+    git clone $GIT_REPO $WORDPRESS_HOME	
+	if [ "$GIT_BTANCH" != "master" ];then
+		echo "INFO: Checkout to "$GIT_BRANCH
+	    git branch --track $GIT_BRANCH origin/$GIT_BRANCH && git checkout $GIT_BRANCH
+	fi	
+	# Although in AZURE, we still need below chown cmd.
+    chown -R www-data:www-data $WORDPRESS_HOME    
 }
 
 update_wordpress_config(){	
@@ -135,19 +149,24 @@ if [ ! -e "$WORDPRESS_HOME/wp-config.php" ]; then
         echo "INFO: DATABASE_HOST:" $DATABASE_HOST
         echo "INFO: WORDPRESS_DATABASE_NAME:" $DATABASE_NAME
         echo "INFO: WORDPRESS_DATABASE_USERNAME:" $DATABASE_USERNAME
-        echo "INFO: WORDPRESS_DATABASE_PASSWORD:" $DATABASE_PASSWORD	        
+        echo "INFO: WORDPRESS_DATABASE_PASSWORD:" $DATABASE_PASSWOR	        
         echo "INFO: ++++++++++++++++++++++++++++++++++++++++++++++++++:"
         echo "Creating database for WordPress if not exists ..."
 	    mysql -u root -e "CREATE DATABASE IF NOT EXISTS \`$DATABASE_NAME\` CHARACTER SET utf8 COLLATE utf8_general_ci;"
 	    echo "Granting user for WordPress ..."
-	    mysql -u root -e "GRANT ALL ON \`$DATABASE_NAME\`.* TO \`$DATABASE_USERNAME\`@\`$DATABASE_HOST\` IDENTIFIED BY '$DATABASE_PASSWORD'; FLUSH PRIVILEGES;"
-	
-        cd $WORDPRESS_HOME 
-		cp $WORDPRESS_SOURCE/wp-config.php . && chmod 777 wp-config.php && chown -R www-data:www-data wp-config.php
+	    mysql -u root -e "GRANT ALL ON \`$DATABASE_NAME\`.* TO \`$DATABASE_USERNAME\`@\`$DATABASE_HOST\` IDENTIFIED BY '$DATABASE_PASSWORD'; FLUSH PRIVILEGES;"	
+         
+		cd $WORDPRESS_SOURCE && chmod 777 wp-config.php
+		if [ ! $WEBSITES_ENABLE_APP_SERVICE_STORAGE ]; then 
+           echo "INFO: NOT in Azure, chown for wp-config.php"
+           chown -R www-data:www-data wp-config.php
+        fi				
         sed -i "s/getenv('DATABASE_NAME')/${DATABASE_NAME}/g" wp-config.php
         sed -i "s/getenv('DATABASE_USERNAME')/${DATABASE_USERNAME}/g" wp-config.php
         sed -i "s/getenv('DATABASE_PASSWORD')/${DATABASE_PASSWORD}/g" wp-config.php
         sed -i "s/getenv('DATABASE_HOST')/${DATABASE_HOST}/g" wp-config.php
+		cd $WORDPRESS_HOME
+		cp $WORDPRESS_SOURCE/wp-config.php .
 
         echo "Starting local Redis ..."
         redis-server --daemonize yes
@@ -159,11 +178,11 @@ fi
 
 echo "Loading WordPress conf ..."
 load_wordpress
-cd $WORDPRESS_HOME 
 rm -rf $WORDPRESS_SOURCE
 
 echo "Starting SSH ..."
-rc-service sshd start
-
 echo "Starting Apache httpd -D FOREGROUND ..."
-apachectl start -D FOREGROUND
+
+test ! -d "$SUPERVISOR_LOG_DIR" && echo "INFO: $SUPERVISOR_LOG_DIR not found. creating ..." && mkdir -p "$SUPERVISOR_LOG_DIR"
+cd /usr/bin/
+supervisord -c /etc/supervisord.conf
