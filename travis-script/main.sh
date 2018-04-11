@@ -322,7 +322,16 @@ do
 			    echo "ERROR - This image can't be run Normally failed, Please double check......"            
 			    exit -1
 		    fi
-            docker exec -it testdocker /bin/sh
+            # Make sur SSH is enabled!
+            testSSHEnable=$(docker top testdocker | grep "sshd")            
+            if [ -z "${testSSHEnable}" ]; then 
+                echo "FAILED - Doesn't found SSH service!!!"
+                exit -1
+            else
+                echo "${testSSHEnable}"
+                echo "PASSED - SSH Service is running..."
+                echo "PASSED - SSH Service is running..." >> result.log
+            fi            
             docker stop testdocker
             docker rm testdocker
         # It's Merge, push/pull/run.
