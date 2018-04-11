@@ -39,6 +39,9 @@ test_Dockerfile(){
     if [ -z "${testSSHEnable}" ]; then 
         testSSHEnable=$(cat $entryPointFile | grep "rc-service sshd start")
     fi
+    if [ -z "${testSSHEnable}" ]; then 
+        testSSHEnable=$(cat $entryPointFile | grep "supervisord")         
+    fi
     _do cd $TRAVIS_BUILD_DIR    
     if [ -z "${testSSHEnable}" ]; then 
         echo "FAILED - Doesn't found cmd about enable SSH in entrypoint file!!!"
