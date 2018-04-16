@@ -5,7 +5,8 @@ docker top testdocker
 testSSHEnable=$(docker top testdocker | grep sshd)
 try_ssh_count=1
 
-while [ $try_ssh_count -le 10 ] 
+while [ $try_ssh_count -le 10 ]
+do 
     if [ -z "${testSSHEnable}" ]; then 
         echo "INFORMATION - Haven't found SSH Service this time, Wait 10s, try again..."
         sleep 10s
