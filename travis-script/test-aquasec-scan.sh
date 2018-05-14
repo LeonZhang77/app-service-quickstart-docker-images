@@ -21,25 +21,27 @@ fi
 
 echo "DOCKER_IMAGE_NAME: ${DOCKER_IMAGE_NAME}"
 
-AQUASEC_CONTAINRE="${DOCKER_ACCOUNT}"/scanner-cli:2.6.4
+AQUASEC_CONTAINRE="${DOCKER_ACCOUNT}"/scanner-cli:3.0
 AQUASEC_SITE="http://aquasecscan.westus2.cloudapp.azure.com:8080"
 AQUASEC_USER="administrator"
 AQUASEC_PASSWORD='Vpn12345!2345'
 
-_do docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock \
-  ${AQUASEC_CONTAINRE} \
-  --user ${AQUASEC_USER} --password ${AQUASEC_PASSWORD} --host ${AQUASEC_SITE} \
-  --local --image testdocker > scan_log.json
+_do docker run -v /var/run/docker.sock:/var/run/docker.sock ${AQUASEC_CONTAINRE}\
+    -H ${AQUASEC_SITE} -U ${AQUASEC_USER} -P ${AQUASEC_PASSWORD} \
+    --local ${DOCKER_IMAGE_NAME} \
+    --register --registry local_scanner > _do scan_log.json
 
 _do cat scan_log.json
 
-testResult=$(cat scan_log.json | grep "DisAllower")
+testResult=$(jq '.image_assurance_result | .disallowed' scan_log.json)
 if [ ! -z "$testResult" ]; then
    echo "FAILED - Docker pull and run Failed!!!"
-   exit -1
+   echo "FAILED - Docker pull and run Failed!!!" >> result.log
+   echo $(jq '.image_assurance_result' scan_log.json)
+   echo $(jq '.image_assurance_result' scan_log.json) >> result.log   
 else
-   echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!"
-   echo "PASSED - Docker image pull and run Successfully!. You can manually verify it!" >> result.log
+   echo "PASSED - No high vulnerability is found !"
+   echo "PASSED - No high vulnerability is found !" >> result.log
 fi
 
 exit 0

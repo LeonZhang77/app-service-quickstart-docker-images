@@ -338,7 +338,7 @@ do
 			    echo "ERROR - PUSH/PULL/RUN failed, Please double check......"            
 			    exit -1
 		    fi
-            ./travis-script/test-docker-scanning.sh ${docker_image_name["${docker_count}"]}
+            ./travis-script/test-aquasec-scan.sh ${docker_image_name["${docker_count}"]}
             test_result=$?
             if ((test_result!=0)); then
 			    echo "ERROR - AquaSec Scanning failed, Please double check......"            
