@@ -6,16 +6,12 @@ function _do()
         "$@" || { echo "exec failed: ""$@"; exit -1; }
 }
 
-echo "INFORMATION - AquaSec Scanner-cli......" 
-echo "INFORMATION - AquaSec Scanner-cli......" >> result.log
-echo "========================================" 
-echo "========================================" >> result.log
+echo "INFORMATION - AquaSec Scanner-cli......" ｜ tee -a result.log
+echo "========================================" ｜ tee -a result.log
 
 if [ $DOCKER_ACCOUNT == $PROD_DOCKER_ACCOUNT ]; then #It's master branch
-    echo "This is Master Branch, SKIP this process......"
-    echo "This is Master Branch, SKIP this process......" >> result.log
-    echo "========================================"
-    echo "========================================" >> result.log
+    echo "This is Master Branch, SKIP this process......" ｜ tee -a result.log
+    echo "========================================" ｜ tee -a result.log
     exit 0
 fi
 
@@ -33,16 +29,20 @@ _do docker run -v /var/run/docker.sock:/var/run/docker.sock ${AQUASEC_CONTAINRE}
 
 _do cat scan_log.json
 
-testResult=$(jq '.image_assurance_result | .disallowed' scan_log.json)
+testResult=$(jq '.image_assurance_results | .disallowed' scan_log.json)
 if [ ! -z "$testResult" ]; then
-   echo "FAILED - Docker pull and run Failed!!!"
-   echo "FAILED - Docker pull and run Failed!!!" >> result.log
-   echo $(jq '.image_assurance_result' scan_log.json)
-   echo $(jq '.image_assurance_result' scan_log.json) >> result.log   
+    echo "FAILED - High vulnerablilites are found!!!" ｜ tee -a result.log
+    echo $(jq '.image_assurance_results' scan_log.json) ｜ tee -a result.log
 else
-   echo "PASSED - No high vulnerability is found !"
-   echo "PASSED - No high vulnerability is found !" >> result.log
+    echo "PASSED - No high vulnerability is found !" ｜ tee -a result.log
 fi
+
+echo "INFO - Get scan result......"
+curl -u ${AQUASEC_USER}:${AQUASEC_PASSWORD}  \
+       ${AQUASEC_SITE}/api/v1/scanner/registry/local_scanner/image/${DOCKER_IMAGE_NAME}:latest/scan_result \
+       | jq. > scan_result.json
+
+cat scan_result.json ｜ tee -a result.log
 
 exit 0
 
