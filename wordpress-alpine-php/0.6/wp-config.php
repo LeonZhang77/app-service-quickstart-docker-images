@@ -87,7 +87,6 @@ $table_prefix  = 'wp_';
  * @link https://codex.wordpress.org/Debugging_in_WordPress
  */
 define('WP_DEBUG', false);
-#define('FORCE_SSL_ADMIN', true);
 
 /* That's all, stop editing! Happy blogging. */
 
